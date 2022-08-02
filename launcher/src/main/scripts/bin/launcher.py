@@ -53,7 +53,7 @@ def load_properties(f):
 def load_lines(f):
     """Load lines from a file, ignoring blank or comment lines"""
     lines = []
-    for line in open(f, 'r').readlines():
+    for line in open(f, 'r'):
         line = line.strip()
         if len(line) > 0 and not line.startswith('#'):
             lines.append(line)
@@ -109,7 +109,7 @@ class Process:
             os.kill(pid, 0)
             return True
         except OSError as e:
-            raise Exception('Signaling pid %s failed: %s' % (pid, e))
+            raise Exception(f'Signaling pid {pid} failed: {e}')
 
     def read_pid(self):
         assert not self.locked, 'pid file is locked by us'
@@ -151,7 +151,7 @@ def symlink_exists(p):
     try:
         st = os.lstat(p)
         if not S_ISLNK(st.st_mode):
-            raise Exception('Path exists and is not a symlink: %s' % p)
+            raise Exception(f'Path exists and is not a symlink: {p}')
         return True
     except OSError as e:
         if e.errno != errno.ENOENT:
@@ -187,13 +187,13 @@ def create_app_symlinks(options):
 
 def build_java_execution(options, daemon):
     if not exists(options.config_path):
-        raise Exception('Config file is missing: %s' % options.config_path)
+        raise Exception(f'Config file is missing: {options.config_path}')
     if not exists(options.jvm_config):
-        raise Exception('JVM config file is missing: %s' % options.jvm_config)
+        raise Exception(f'JVM config file is missing: {options.jvm_config}')
     if not exists(options.launcher_config):
-        raise Exception('Launcher config file is missing: %s' % options.launcher_config)
+        raise Exception(f'Launcher config file is missing: {options.launcher_config}')
     if options.log_levels_set and not exists(options.log_levels):
-        raise Exception('Log levels file is missing: %s' % options.log_levels)
+        raise Exception(f'Log levels file is missing: {options.log_levels}')
 
     with open(os.devnull, 'w') as devnull:
         try:
@@ -236,7 +236,7 @@ def build_java_execution(options, daemon):
     # set process name: https://github.com/airlift/procname
     process_name = launcher_properties.get('process-name', '')
     if len(process_name) > 0:
-        system = platform.system() + '-' + platform.machine()
+        system = f'{platform.system()}-{platform.machine()}'
         shim = pathjoin(options.install_path, 'bin', 'procname', system, 'libprocname.so')
         if exists(shim):
             env['LD_PRELOAD'] = (env.get('LD_PRELOAD', '') + ':' + shim).strip()
@@ -247,7 +247,7 @@ def build_java_execution(options, daemon):
 
 def run(process, options):
     if process.alive():
-        print('Already running as %s' % process.read_pid())
+        print(f'Already running as {process.read_pid()}')
         return
 
     create_app_symlinks(options)
@@ -265,7 +265,7 @@ def run(process, options):
 
 def start(process, options):
     if process.alive():
-        print('Already running as %s' % process.read_pid())
+        print(f'Already running as {process.read_pid()}')
         return
 
     create_app_symlinks(options)
@@ -280,7 +280,7 @@ def start(process, options):
     pid = os.fork()
     if pid > 0:
         process.write_pid(pid)
-        print('Started as %s' % pid)
+        print(f'Started as {pid}')
         return
 
     os.setsid()
@@ -304,7 +304,7 @@ def terminate(process, signal, message):
             os.kill(pid, signal)
         except OSError as e:
             if e.errno != errno.ESRCH:
-                raise Exception('Signaling pid %s failed: %s' % (pid, e))
+                raise Exception(f'Signaling pid {pid} failed: {e}')
 
         if not process.alive():
             process.clear_pid()
@@ -312,7 +312,7 @@ def terminate(process, signal, message):
 
         sleep(0.1)
 
-    print('%s %s' % (message, pid))
+    print(f'{message} {pid}')
 
 
 def stop(process):
@@ -327,7 +327,7 @@ def status(process):
     if not process.alive():
         print('Not running')
         sys.exit(LSB_NOT_RUNNING)
-    print('Running as %s' % process.read_pid())
+    print(f'Running as {process.read_pid()}')
 
 
 def handle_command(command, options):
@@ -346,7 +346,7 @@ def handle_command(command, options):
     elif command == 'status':
         status(process)
     else:
-        raise AssertionError('Unhandled command: ' + command)
+        raise AssertionError(f'Unhandled command: {command}')
 
 
 def create_parser():
@@ -372,7 +372,7 @@ def parse_properties(parser, args):
     properties = {}
     for arg in args:
         if '=' not in arg:
-            parser.error('property is malformed: %s' % arg)
+            parser.error(f'property is malformed: {arg}')
         key, value = [i.strip() for i in arg.split('=', 1)]
         if key == 'config':
             parser.error('cannot specify config using -D option (use --config)')
@@ -408,12 +408,12 @@ def main():
     command = args[0]
 
     if command not in COMMANDS:
-        parser.error('unsupported command: %s' % command)
+        parser.error(f'unsupported command: {command}')
 
     try:
         install_path = find_install_path(sys.argv[0])
     except Exception as e:
-        print('ERROR: %s' % e)
+        print(f'ERROR: {e}')
         sys.exit(LSB_STATUS_UNKNOWN)
 
     o = Options()
@@ -429,7 +429,7 @@ def main():
     o.jvm_options = options.jvm_options or []
 
     if options.node_config and not exists(o.node_config):
-        parser.error('Node config file is missing: %s' % o.node_config)
+        parser.error(f'Node config file is missing: {o.node_config}')
 
     node_properties = {}
     if exists(o.node_config):
@@ -458,7 +458,7 @@ def main():
         if o.verbose:
             traceback.print_exc()
         else:
-            print('ERROR: %s' % e)
+            print(f'ERROR: {e}')
         sys.exit(LSB_STATUS_UNKNOWN)
 
 
